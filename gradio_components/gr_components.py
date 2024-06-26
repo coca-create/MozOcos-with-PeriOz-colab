@@ -191,12 +191,12 @@ def gr_components():
                     vtt_output_2 = gr.File(label="ピリオド区切りの英語字幕ファイルとワードファイルです。",file_count="multiple")  # 分割・結合処理後のvtt,srtファイル
                     vtt_translated_file = gr.File(label="ピリオド区切りの英文から作った日本語字幕ファイルです。")  # 翻訳されたvtt,srtファイルの出力
             with gr.Row():
-                t7_clear_button = gr.Button("クリア") 
-                t7_translate_button = gr.Button("日本語vtt,srtの作成",variant='primary') 
+                t7_clear_button = gr.Button("クリア")  
+                t7_translate_button = gr.Button("日本語vtt,srtの作成",variant='primary')
             with gr.Row():
                 vtt_output_1 = gr.HTML()  # 分割・結合処理後のHTML表示
-                vtt_translated_content = gr.TextArea(label="翻訳された字幕情報を貼り付けてください。")  # 翻訳処理後の内容を貼り付け。        
-
+                vtt_translated_content = gr.TextArea(label="翻訳された字幕情報を貼り付けてください。")  # 翻訳処理後の内容を貼り付け。 
+                dummy_file=gr.File(visible=False)       
         ##クリアボタン追加分をまとめる。
         def t1_clear():
             return None,"","","",[],[],"","","","",""
@@ -207,7 +207,7 @@ def gr_components():
         def t6_clear():
             return None,None,[]
         def t7_clear():
-            return None,None,None,None,None
+            return None,None,None,None,None,None
 
         def param1_change_clear():
             return None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None
@@ -281,18 +281,16 @@ def gr_components():
         )
         ### Tab7 イベントリスナー ###
         vtt_input.upload(
-        fn=t7.process_file, inputs=[vtt_input], outputs=[vtt_output_1, vtt_output_2]
+        fn=t7.process_file, inputs=[vtt_input], outputs=[vtt_output_1, vtt_output_2,dummy_file]
     )
-
         t7_translate_button.click(
             fn=t7.vtt_translate,
-            inputs=[vtt_input, vtt_translated_content],
+            inputs=[vtt_input, vtt_translated_content,dummy_file],
             outputs=[vtt_translated_file]
         )
-
         t7_clear_button.click(
             fn=t7_clear,
             inputs=[],
-            outputs=[vtt_input,vtt_translated_content,vtt_translated_file,vtt_output_1,vtt_output_2]
+            outputs=[vtt_input,vtt_translated_content,vtt_translated_file,vtt_output_1,vtt_output_2,dummy_file]
         )
         return UI

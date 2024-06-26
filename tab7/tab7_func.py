@@ -3,6 +3,8 @@ import os
 import gradio as gr
 import codecs
 from docx import Document
+import pandas as pd
+from openpyxl.styles import Alignment, Font, PatternFill
 
 def replace_special_periods(text):
     text = re.sub(r'\bDr\.', 'Dr<PERIOD>', text)
@@ -128,9 +130,29 @@ def process_srt(lines):
 
     return '\n'.join(output)
 
-def convert_time_to_seconds(time_str):
+'''def convert_time_to_seconds(time_str):
     h, m, s = map(float, time_str.replace(',', '.').split(':'))
-    return h * 3600 + m * 60 + s
+    return h * 3600 + m * 60 + s'''
+
+def convert_time_to_seconds(time_str):
+    try:
+        time_parts = time_str.split(':')
+        if len(time_parts) == 3:
+            h, m, s = time_parts
+        elif len(time_parts) == 2:
+            h = 0
+            m, s = time_parts
+        else:
+            raise ValueError(f"Unexpected time format: {time_str}")
+        
+        h = float(h)
+        m = float(m)
+        s = float(s.replace(',', '.'))
+        return h * 3600 + m * 60 + s
+    except ValueError as e:
+        raise ValueError(f"Error converting time: {time_str}, {e}")
+
+
 
 def convert_seconds_to_time(seconds, format_type='vtt'):
     h = int(seconds // 3600)
@@ -140,9 +162,7 @@ def convert_seconds_to_time(seconds, format_type='vtt'):
         return f"{h:02}:{m:02}:{s:06.3f}".replace(',', '.')
     else:
         return f"{h:02}:{m:02}:{s:06.3f}".replace('.', ',')
-
-
-
+    
 def process_file(input_file):
     if input_file is None:
         return None, None
@@ -173,19 +193,124 @@ def process_file(input_file):
 
     output_html = f"""<pre style="white-space: pre-wrap; overflow-y: auto; height: 500px; word-wrap: break-word; padding: 10px; font-family: inherit; font-size: inherit;">{output}</pre>"""
 
-    return output_html, [output_file, docx_file]
+    return output_html, [output_file, docx_file],output_file
 
 
 
-def vtt_translate(input_file, translated_content):
+def vtt_translate(input_file, translated_content,output_file):
+    if input_file==None or translated_content==None or output_file==None:
+        return None
+    
     ja_file_name, file_extension = os.path.splitext(input_file)
     output_ja_file_path = ja_file_name + "_edited_ja" + file_extension
 
     with codecs.open(output_ja_file_path, 'w', 'utf-8') as f:
         f.write(translated_content)
 
-    return output_ja_file_path
+    output_excel_file = create_excel(output_file, output_ja_file_path)
+    return [output_ja_file_path,output_excel_file]
 
+##追加ぶん
 
+def create_excel(output_file, output_ja_file_path):
+    segments = []
+    if output_file.lower().endswith('.vtt') or output_file.lower().endswith('.srt'):
+        with open(output_file, 'r') as f:
+            lines = f.readlines()
+            segments.extend(parse_segments(lines))
+    
+    if output_ja_file_path.lower().endswith('.vtt') or output_ja_file_path.lower().endswith('.srt'):
+        with codecs.open(output_ja_file_path, 'r', 'utf-8') as f:
+            ja_lines = f.readlines()
+            ja_segments = parse_segments(ja_lines)
+    
+    excel_data = []
+    for (eng_segment, start, end), ja_segment in zip(segments, ja_segments):
+        if start is not None and end is not None:
+            excel_data.append({
+                'ID': segments.index((eng_segment, start, end)) + 1,
+                'Start': convert_seconds_to_time(start),
+                'End': convert_seconds_to_time(end),
+                'English Subtitle': eng_segment,
+                'Japanese Subtitle': ja_segment[0]
+            })
+        else:
+            print(f"Skipping segment due to missing time: {eng_segment}")
 
+    df = pd.DataFrame(excel_data)
+    output_excel_file = os.path.splitext(output_file)[0] + '.xlsx'
+    df.to_excel(output_excel_file, index=False)
 
+    with pd.ExcelWriter(output_excel_file, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Subtitles')
+        workbook = writer.book
+        worksheet = writer.sheets['Subtitles']
+
+        column_widths = {'A': 7, 'B': 25, 'C': 25, 'D': 90, 'E': 90}
+        for column, width in column_widths.items():
+            worksheet.column_dimensions[column].width = width
+
+        for row in worksheet.iter_rows(min_row=2, max_row=len(df) + 1):
+            for cell in row:
+                if cell.column_letter == 'A':
+                    cell.alignment = Alignment(horizontal='right', vertical='center')
+                elif cell.column_letter in ['B', 'C']:
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+                elif cell.column_letter in ['D', 'E']:
+                    cell.alignment = Alignment(horizontal='left', vertical='center')
+
+        for row in worksheet.iter_rows(min_row=2, max_row=len(df) + 1):
+            worksheet.row_dimensions[row[0].row].height = 30
+
+        header_font = Font(bold=True)
+        for cell in worksheet["1:1"]:
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center')
+            cell.fill = PatternFill(start_color="DAEEF3", end_color="DAEEF3", fill_type="solid")
+
+    return output_excel_file
+
+'''def parse_segments(lines):
+    segments = []
+    start_time = None
+    end_time = None
+    text = ""
+    for line in lines:
+        if re.match(r'^\d+$', line.strip()):
+            if text:
+                segments.append((text.strip(), start_time, end_time))
+            text = ""
+        elif '-->' in line:
+            times = line.strip().split(' --> ')
+            start_time = convert_time_to_seconds(times[0].replace(',', '.'))
+            end_time = convert_time_to_seconds(times[1].replace(',', '.'))
+        else:
+            text += line.strip() + " "
+    if text:
+        segments.append((text.strip(), start_time, end_time))
+    return segments
+
+'''
+def parse_segments(lines):
+    segments = []
+    start_time = None
+    end_time = None
+    text = ""
+    for line in lines:
+        if re.match(r'^\d+$', line.strip()):
+            if text:
+                segments.append((text.strip(), start_time, end_time))
+            text = ""
+        elif '-->' in line:
+            times = line.strip().split(' --> ')
+            try:
+                start_time = convert_time_to_seconds(times[0])
+                end_time = convert_time_to_seconds(times[1])
+            except ValueError as e:
+                print(f"Error parsing time: {times}, {e}")
+                start_time, end_time = None, None
+        else:
+            text += line.strip() + " "
+    if text:
+        segments.append((text.strip(), start_time, end_time))
+    return segments
