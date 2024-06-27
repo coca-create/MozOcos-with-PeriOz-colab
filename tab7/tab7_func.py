@@ -270,27 +270,7 @@ def create_excel(output_file, output_ja_file_path):
 
     return output_excel_file
 
-'''def parse_segments(lines):
-    segments = []
-    start_time = None
-    end_time = None
-    text = ""
-    for line in lines:
-        if re.match(r'^\d+$', line.strip()):
-            if text:
-                segments.append((text.strip(), start_time, end_time))
-            text = ""
-        elif '-->' in line:
-            times = line.strip().split(' --> ')
-            start_time = convert_time_to_seconds(times[0].replace(',', '.'))
-            end_time = convert_time_to_seconds(times[1].replace(',', '.'))
-        else:
-            text += line.strip() + " "
-    if text:
-        segments.append((text.strip(), start_time, end_time))
-    return segments
 
-'''
 def parse_segments(lines):
     segments = []
     start_time = None

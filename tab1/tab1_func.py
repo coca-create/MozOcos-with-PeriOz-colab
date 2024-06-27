@@ -252,7 +252,7 @@ def transcribe(File, Model, Computing, Lang, BeamSize, VadFilter, progress=gr.Pr
 
 
     # zipファイルにまとめる(doc)。
-    zip_doc_file_name = f"{input_file_name}_doc.zip"
+    zip_doc_file_name = f"{input_file_name}_docx_en.zip"
     zip_doc_file_path = os.path.join(temp_dir, zip_doc_file_name)
 
     with zipfile.ZipFile(zip_doc_file_path, 'w') as zip_file:

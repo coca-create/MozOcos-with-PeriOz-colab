@@ -9,6 +9,7 @@ from tab7 import tab7_func as t7
 import pandas as pd
 
 def gr_components():
+
     with gr.Blocks() as UI:
         gr.Markdown(
             """
@@ -19,7 +20,7 @@ def gr_components():
         ### Gradio-Tab1 ###
        
             
-        with gr.Tab("文字起こし"):
+        with gr.Tab("文字起こし",elem_classes="Tab1"):
             gr.Markdown("> 字幕ファイル（srtファイル）、テキストファイル2種、Google翻訳用ワードファイルが表示されます。Google翻訳用のwordファイルが必要な場合はアコーディオンを開いてね。") 
             with gr.Row():
                 with gr.Column():
@@ -54,18 +55,18 @@ def gr_components():
             gr.Markdown("> Google Chromeで取得した翻訳コピーを貼り付けて日本語ファイルを作るためのTabです。SRTファイルを作成するときは同時にExcelファイルを作ります")
             with gr.Column():
                 filename_output=gr.Textbox(label="ファイルのベースネーム",placeholder="ファイル名が空、または間違っているときは記入してね。")
-                extension_choices = gr.CheckboxGroup(["srt", "txt(nr)", "txt(r)"],value=["srt","txt(nr)", "txt(r)"], label="ファイルの種類を選んで下さい。")
+                extension_choices = gr.CheckboxGroup(["srt", "txt(nr)", "txt(r)"],value=["srt"], label="ファイルの種類を選んで下さい。")
             with gr.Column():
                 gr.Markdown("ここに翻訳コピーを貼り付けます。")
                 with gr.Row():
                     translate_srt = gr.TextArea(label="Translate Content for _ja.srt", visible=True)
-                    translate_nr_txt = gr.TextArea(label="Translate Content for _NR_ja.txt", visible=True)
-                    translate_r_txt = gr.TextArea(label="Translate Content for _R_ja.txt", visible=True)
+                    translate_nr_txt = gr.TextArea(label="Translate Content for _NR_ja.txt", visible=False)
+                    translate_r_txt = gr.TextArea(label="Translate Content for _R_ja.txt", visible=False)
                     dummy=gr.Textbox(label="後で非表示" ,visible=False)
                 with gr.Row():
                     html_srt = gr.HTML(visible=True)
-                    html_nr_txt = gr.HTML(visible=True)
-                    html_r_txt= gr.HTML(visible=True)
+                    html_nr_txt = gr.HTML(visible=False)
+                    html_r_txt= gr.HTML(visible=False)
             with gr.Row():
                 generate_files_button = gr.Button("日本語ファイルの生成",variant="primary")
                 t2_clear_button=gr.Button("クリア")
@@ -147,7 +148,7 @@ def gr_components():
         
         ### Gradio-Tab5 ###
         with gr.Tab("Word↔SRT,TXT"):
-            gr.Markdown("> DOCXファイルは末尾が[_srt.docx],[_txtnr.docx],[_txtr.docx]のファイルのみ入力できます。SRTまたはTXTファイルは末尾が[.srt][_NR.txt][_R.txt]のファイルのみ入力できます。複数のファイルを一度に扱えますが、アップロードは1回で行う必要があります。")  
+            gr.Markdown("> DOCXファイルは末尾が[_srt.docx],[_txtnr.docx],[_txtr.docx]のファイル、あるいは[_srt (1).docx]のように（1）のついたファイルを扱えます。複数のファイルを一度に扱えますが、アップロードは1回で行う必要があります。")  
             with gr.Column():
                 with gr.Row():
                     to_srttxt_input = gr.File(label="Upload docx for srt/txt", file_count="multiple", type='filepath', file_types=["docx"])
@@ -156,7 +157,7 @@ def gr_components():
                     to_srttxt_button = gr.Button("DOCX　→　SRT/TXT", variant='primary')
                     to_srttxt_clear_button = gr.Button("クリア")
 
-
+            gr.Markdown("> SRTまたはTXTファイルは末尾が[.srt][_NR.txt][_R.txt]のファイルのみ入力できます。複数のファイルを一度に扱えますが、アップロードは1回で行う必要があります。")
             with gr.Row():
                 various_file_input = gr.File(file_count='multiple', label="Upload srt/txt for docx")
                 output_doc_files = gr.File(file_count='multiple', label="Converted docx")
@@ -170,7 +171,7 @@ def gr_components():
         
         ### Gradio-Tab6 ###
         with gr.Tab("合成音声作成"):
-            gr.Markdown("> Textファイルから、合成音声を作成します。暫く時間がかかります。男性はkentaさん、女性はnanamiさんだったと思います。")
+            gr.Markdown("> Textファイルから、合成音声を作成します。暫く時間がかかります。1.5\~2hの音声の処理時間は10\~15分程度かと思います。男性はkentaさん、女性はnanamiさんだったと思います。")
             with gr.Row():
                 with gr.Column():
                     input_audio=gr.File()
