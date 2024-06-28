@@ -117,6 +117,36 @@ def create_translate_files(copied_filename, translate_srt, translate_nr_txt, tra
         output_filename = f"{copied_filename}{extension_suffix}"
         output_file_path = os.path.join(temp_dir, output_filename)
 
+        ##ここを追加（翻訳された文字列の編集）
+        if ext == 'srt':
+            subtitle_content=re.sub(r'[\u200B-\u200D\uFEFF]', '', translate_srt)
+            subtitle_content=re.sub(r'\s+', '', subtitle_content)
+
+            pattern = re.compile(r'(\d{1,4})(\d{2}:\d{2}:\d{2},\d{3}-->\d{2}:\d{2}:\d{2},\d{3})')
+            matches = pattern.findall(subtitle_content)
+
+            segments = pattern.split(subtitle_content)
+            corrected_content = []
+
+            for i in range(1, len(segments), 3):
+                segment_id = segments[i]
+                timestamp = segments[i + 1]
+                text = segments[i + 2]
+                
+                corrected_content.append(f"{segment_id}")
+                corrected_content.append(timestamp.replace('-->', ' --> '))
+                corrected_content.append(text)
+
+            # Ensure each subtitle block is separated by exactly one empty line
+            final_content = "\n\n".join("\n".join(block) for block in zip(*[iter(corrected_content)]*3))
+            with open(output_file_path, 'w', encoding='utf-8') as f:
+                f.write(final_content)
+
+            output_files.append(output_file_path)
+            continue
+
+        # ここまで
+
         with open(output_file_path, 'w', encoding='utf-8') as f:
             f.write(subtitle_content)
         

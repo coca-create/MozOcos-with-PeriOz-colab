@@ -188,14 +188,70 @@ def process_file(input_file):
     doc = Document()
     doc.add_paragraph(output)
     basename = os.path.splitext(input_file)[0]
-    docx_file = basename + '_en_edited.docx'
+    if file_extension.lower() == '.vtt':
+        docx_file = basename + '_edited_vtt.docx'
+    elif file_extension.lower()=='.srt':
+        docx_file = basename + '_edited_srt.docx'    
     doc.save(docx_file)
 
-    output_html = f"""<pre style="white-space: pre-wrap; overflow-y: auto; height: 500px; word-wrap: break-word; padding: 10px; font-family: inherit; font-size: inherit;">{output}</pre>"""
+    output_html = f"""<head><meta charset="UTF-8"></head><body><pre style="white-space: pre-wrap; overflow-y: auto; height: 500px; word-wrap: break-word; padding: 10px; font-family: inherit; font-size: inherit;">{output}</pre></body>"""
 
     return output_html, [output_file, docx_file],output_file
 
+##翻訳後の関数##
+def correct_srt_format_from_text(text):
+    # Remove all whitespace and newlines
+    content = re.sub(r'[\u200B-\u200D\uFEFF]', '', text)
+    content = re.sub(r'\s+', '', content)
 
+    # Reconstruct the SRT format
+    pattern = re.compile(r'(\d{1,4})(\d{2}:\d{2}:\d{2},\d{3}-->\d{2}:\d{2}:\d{2},\d{3})')
+    matches = pattern.findall(content)
+    
+    segments = pattern.split(content)
+    corrected_content = []
+    
+    for i in range(1, len(segments), 3):
+        segment_id = segments[i]
+        timestamp = segments[i + 1]
+        text = segments[i + 2]
+        
+        corrected_content.append(f"{segment_id}")
+        corrected_content.append(timestamp.replace('-->', ' --> '))
+        corrected_content.append(text)
+
+    # Ensure each subtitle block is separated by exactly one empty line
+    final_content = "\n\n".join("\n".join(block) for block in zip(*[iter(corrected_content)]*3))
+    
+    return final_content
+
+
+def correct_vtt_format_from_text(text):
+    # Remove all whitespace and newlines
+    content = re.sub(r'[\u200B-\u200D\uFEFF]', '', text)
+    # Remove all whitespace and newlines
+    content = re.sub(r'\s+', '', content)
+
+    # Reconstruct the VTT format
+    pattern = re.compile(r'(\d{1,4})(\d{2}:\d{2}:\d{2}\.\d{3}-->\d{2}:\d{2}:\d{2}\.\d{3})')
+    matches = pattern.findall(content)
+    
+    segments = pattern.split(content)
+    corrected_content = []
+    
+    for i in range(1, len(segments), 3):
+        segment_id = segments[i]
+        timestamp = segments[i + 1]
+        text = segments[i + 2]
+        
+        corrected_content.append(f"{segment_id}")
+        corrected_content.append(timestamp.replace('-->', ' --> '))
+        corrected_content.append(text)
+
+    # Ensure each subtitle block is separated by exactly one empty line
+    final_content = "WEBVTT\n\n" + "\n\n".join("\n".join(block) for block in zip(*[iter(corrected_content)]*3))
+    
+    return final_content
 
 def vtt_translate(input_file, translated_content,output_file):
     if input_file==None or translated_content==None or output_file==None:
@@ -203,10 +259,17 @@ def vtt_translate(input_file, translated_content,output_file):
     
     ja_file_name, file_extension = os.path.splitext(input_file)
     output_ja_file_path = ja_file_name + "_edited_ja" + file_extension
+    if file_extension==".srt":
+        corrected_content=correct_srt_format_from_text(translated_content)
+    
+    elif file_extension==".vtt":
+        corrected_content=correct_vtt_format_from_text(translated_content)
+    
+    with open(output_ja_file_path,'w',encoding='utf-8') as file:
+            file.write(corrected_content+'\n')
 
-    with codecs.open(output_ja_file_path, 'w', 'utf-8') as f:
-        f.write(translated_content)
 
+    # excel出力
     output_excel_file = create_excel(output_file, output_ja_file_path)
     return [output_ja_file_path,output_excel_file]
 
@@ -269,7 +332,6 @@ def create_excel(output_file, output_ja_file_path):
             cell.fill = PatternFill(start_color="DAEEF3", end_color="DAEEF3", fill_type="solid")
 
     return output_excel_file
-
 
 def parse_segments(lines):
     segments = []

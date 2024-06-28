@@ -86,7 +86,7 @@ def gr_components():
         ### Gradio-Tab3 ###
         
         with gr.Tab("SRT→Excel"):
-            gr.Markdown("> 英語と日本語を並べて読むためのツールです。2つのsrtファイルはタイムスタンプが一致している必要があります。")   
+            gr.Markdown("> 英語と日本語を並べて読むためのツールです。文字起こしの際に作成できるexcelファイルと同じです。2つのsrtファイルはタイムスタンプが一致している必要があります。")   
             lang_for_xls_choice = gr.Radio(
                 choices=["English and Japanese", "only English", "only Japanese"],
                 label="どんなExcelファイル？",
@@ -133,9 +133,9 @@ def gr_components():
         
         ### Gradio-Tab4 ##
         with gr.Tab("翻訳ファイル作成補助②"):
-            gr.Markdown("> SRT,TXT,DOCXのいずれかの英文ファイルをアップロードすると内容が表示されます。次にGoogle翻訳で得た翻訳をテキストエリアに入力します。「翻訳ファイルを作成」ボタンを押して、入力ファイルと同形式のファイルに保存します。ファイル名に _ja が付加されます。")
+            gr.Markdown("> srt,vtt,txt,docxのいずれかの英文ファイルをアップロードすると内容が表示されます。次にGoogle翻訳で得た翻訳をテキストエリアに入力します。「翻訳ファイルを作成」ボタンを押して、入力ファイルと同形式のファイルに保存します。ファイル名に _ja が付加されます。")
             with gr.Row():
-                file_input = gr.File(label="Upload file", file_count="single", file_types=['docx', 'txt', 'srt'])
+                file_input = gr.File(label="Upload file", file_count="single", file_types=['docx', 'txt', 'srt','vtt'])
                 output_file = gr.File(label="Translated file" ,type='filepath')
             
             with gr.Row():
@@ -147,8 +147,8 @@ def gr_components():
                 translated_text = gr.TextArea(label="Translated text")
         
         ### Gradio-Tab5 ###
-        with gr.Tab("Word↔SRT,TXT"):
-            gr.Markdown("> DOCXファイルは末尾が[_srt.docx],[_txtnr.docx],[_txtr.docx]のファイル、あるいは[_srt (1).docx]のように（1）のついたファイルを扱えます。複数のファイルを一度に扱えますが、アップロードは1回で行う必要があります。")  
+        with gr.Tab("Word↔SRT,VTT,TXT"):
+            gr.Markdown("> 日本語のwordファイルをsrtあるいはtxt形式に戻すためのプログラムです。wordファイルは末尾が[_srt.docx][_vtt.docx][_txtnr.docx],[_txtr.docx]、あるいは[_srt (1).docx]のように（1）の付加された\"日本語\"ファイルが対象です。複数のファイルを一度に扱えますが、アップロードは1回で行う必要があります。")  
             with gr.Column():
                 with gr.Row():
                     to_srttxt_input = gr.File(label="Upload docx for srt/txt", file_count="multiple", type='filepath', file_types=["docx"])
@@ -157,7 +157,7 @@ def gr_components():
                     to_srttxt_button = gr.Button("DOCX　→　SRT/TXT", variant='primary')
                     to_srttxt_clear_button = gr.Button("クリア")
 
-            gr.Markdown("> SRTまたはTXTファイルは末尾が[.srt][_NR.txt][_R.txt]のファイルのみ入力できます。複数のファイルを一度に扱えますが、アップロードは1回で行う必要があります。")
+            gr.Markdown("> 翻訳準備として、英語のsrtあるいはtxtファイルをword形式に変換するためのプログラムです。srtまたはtxtファイルは末尾が[.srt][.vtt][_NR.txt][_R.txt]のファイルのみ入力できます。複数のファイルを一度に扱えますが、アップロードは1回で行う必要があります。")
             with gr.Row():
                 various_file_input = gr.File(file_count='multiple', label="Upload srt/txt for docx")
                 output_doc_files = gr.File(file_count='multiple', label="Converted docx")
@@ -171,7 +171,7 @@ def gr_components():
         
         ### Gradio-Tab6 ###
         with gr.Tab("合成音声作成"):
-            gr.Markdown("> Textファイルから、合成音声を作成します。暫く時間がかかります。1.5\~2hの音声の処理時間は10\~15分程度かと思います。男性はkentaさん、女性はnanamiさんだったと思います。")
+            gr.Markdown("> 日本語で書かれたテキストファイルから、合成音声を作成します。暫く時間がかかります。1.5\~2hの音声の処理時間は10\~15分程度かと思います。男性はkentaさん、女性はnanamiさんだったと思います。")
             with gr.Row():
                 with gr.Column():
                     input_audio=gr.File()
