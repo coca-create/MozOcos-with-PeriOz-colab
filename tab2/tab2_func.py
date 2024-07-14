@@ -5,7 +5,6 @@ from pydub import AudioSegment
 import gradio as gr
 from faster_whisper import WhisperModel
 import zipfile
-import torch
 from docx import Document
 import re
 from openpyxl.styles import Alignment, Font, PatternFill
