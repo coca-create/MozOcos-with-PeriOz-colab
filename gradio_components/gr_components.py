@@ -187,7 +187,7 @@ def gr_components():
                     download_audio=gr.File(label="ダウンロードリンク")
         
         ### Gradio-Tab7 ###
-        with gr.Tab("originalvttの再編"):
+        with gr.Tab("配布字幕の再編"):
             gr.Markdown("> original動画に付属する字幕をピリオド区切りに再編し、翻訳した字幕ファイルを作ります。")
             with gr.Row():
                 vtt_input = gr.File(label="vtt/srtファイルをアップロードしてください。")  # input用のoriginal vtt,srt
