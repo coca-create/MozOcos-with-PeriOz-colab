@@ -33,8 +33,6 @@ def format_timestamp(seconds):
 
 #dataframe追加
 def parse_srt_c(srt_content):
-    
-    
     pattern = r'(\d+)\n(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})\n(.*?)\n\n'
     matches = re.findall(pattern, srt_content, re.DOTALL)
     
@@ -50,9 +48,8 @@ def parse_srt_c(srt_content):
     return subtitles
 
 # SRTファイルからExcelファイルを作成する関数
-def create_excel_from_srt_c(srt_content,input_file_name='Noname'):
-
-    excel_file_name = f"{input_file_name}.xlsx"
+def create_excel_from_srt_c(srt_content, input_file_name='Noname'):
+    excel_file_name = f"{input_file_name}_en.xlsx"
     english_subtitles = parse_srt_c(srt_content)
 
     data = []
@@ -65,7 +62,8 @@ def create_excel_from_srt_c(srt_content,input_file_name='Noname'):
         })
 
     df = pd.DataFrame(data)
-    excel_file_path = os.path.join(tempfile.gettempdir(), excel_file_name)
+    temp_dir = tempfile.gettempdir()
+    excel_file_path = os.path.join(temp_dir, excel_file_name)
     
     with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
         df.to_excel(writer, index=False, sheet_name='Subtitles')
@@ -96,13 +94,11 @@ def create_excel_from_srt_c(srt_content,input_file_name='Noname'):
 
     return excel_file_path, df
 
-def exe_for_gradio(srt_content,input_file_name='Noname'):
-    excel_filepath,df=create_excel_from_srt_c(srt_content,input_file_name)
-    return df
-
+'''def exe_for_gradio(srt_content, input_file_name='Noname'):
+    excel_filepath, df_display = create_excel_from_srt_c(srt_content, input_file_name)
+    return df_display'''
 
 def transcribe(File, Model, Computing, Lang, BeamSize, VadFilter, progress=gr.Progress()):
-    
     if not File:
         error_message = "エラー: ファイルが提供されていません。"
         return error_message, "", "", [], [], "", "", "", "", ""
@@ -161,7 +157,6 @@ def transcribe(File, Model, Computing, Lang, BeamSize, VadFilter, progress=gr.Pr
     finally:
         # メモリ解放
         del model
-
 
     try:
         for word_info in words_data:
@@ -335,8 +330,7 @@ def transcribe(File, Model, Computing, Lang, BeamSize, VadFilter, progress=gr.Pr
 
         #xls,df追加
 
-        excel_filepath,df_display=create_excel_from_srt_c(content=srt_content,input_file_name=input_file_name)
-
+        excel_filepath, df_display = create_excel_from_srt_c(srt_content=srt_content, input_file_name=input_file_name)
 
         # zipファイルにまとめる(srt,txtr,txtnr)。
         zip_core_file_name = f"{input_file_name}_core.zip"
@@ -346,47 +340,40 @@ def transcribe(File, Model, Computing, Lang, BeamSize, VadFilter, progress=gr.Pr
             zip_file.write(srt_output_path, os.path.basename(srt_output_path))
             zip_file.write(txt_r_output_path, os.path.basename(txt_r_output_path))
             zip_file.write(txt_nr_output_path, os.path.basename(txt_nr_output_path))
-            zip_file.write(excel_filepath,os.path.basename(excel_filepath))
+            zip_file.write(excel_filepath, os.path.basename(excel_filepath))
      
-
-
         # zipファイルにまとめる(doc)。
         zip_doc_file_name = f"{input_file_name}_docx_en.zip"
         zip_doc_file_path = os.path.join(temp_dir, zip_doc_file_name)
 
         with zipfile.ZipFile(zip_doc_file_path, 'w') as zip_file:
-            zip_file.write(srtdoc_output_path,os.path.basename(srtdoc_output_path))
-            zip_file.write(txtdoc_nr_output_path,os.path.basename(txtdoc_nr_output_path))
-            zip_file.write(txtdoc_r_output_path,os.path.basename(txtdoc_r_output_path))
+            zip_file.write(srtdoc_output_path, os.path.basename(srtdoc_output_path))
+            zip_file.write(txtdoc_nr_output_path, os.path.basename(txtdoc_nr_output_path))
+            zip_file.write(txtdoc_r_output_path, os.path.basename(txtdoc_r_output_path))
 
         print(f"Processed {FileName}")
         
-        main_files = [srt_output_path,
-                        txt_nr_output_path,
-                        txt_r_output_path,
-                        excel_filepath,
-                        zip_core_file_path]
+        main_files = [
+            srt_output_path,
+            txt_nr_output_path,
+            txt_r_output_path,
+            excel_filepath,
+            zip_core_file_path
+        ]
         
         zip_doc_file_path = os.path.join(temp_dir, zip_doc_file_name)
 
-        doc_files=[srtdoc_output_path,txtdoc_nr_output_path,txtdoc_r_output_path,zip_doc_file_path]
+        doc_files = [srtdoc_output_path, txtdoc_nr_output_path, txtdoc_r_output_path, zip_doc_file_path]
         
-        df_display=df_display
+        df_display = df_display
         html_srt = f"""<pre style="white-space: pre-wrap; overflow-y: auto; height: 400px; word-wrap: break-word; padding: 10px; font-family: inherit; font-size: inherit;">{srt_content}</pre>"""
         html_nr_txt = f"""<pre style="white-space: pre-wrap; overflow-y:auto; height: 400px; word-wrap: break-word; padding: 10px; font-family: inherit; font-size: inherit;">{txt_nr_content}</pre>"""
         html_r_txt = f"""<pre style="white-space: pre-wrap; overflow-y:auto; height: 400px; word-wrap: break-word; padding: 10px; font-family: inherit; font-size: inherit;">{txt_r_content}</pre>"""
 
-        filename_copy=input_file_name
-        srt_dummy_output_path=srt_output_path
+        filename_copy = input_file_name
+        srt_dummy_output_path = srt_output_path
 
-        return srt_content, txt_nr_content, txt_r_content, main_files, doc_files ,html_srt, html_nr_txt, html_r_txt,filename_copy,srt_dummy_output_path,df_display
+        return srt_content, txt_nr_content, txt_r_content, main_files, doc_files ,html_srt, html_nr_txt, html_r_txt, filename_copy, srt_dummy_output_path, df_display
     except Exception as e:
         error_message = f"ファイル処理中にエラーが発生しました: {e}"
-        return error_message, "", "", [], [], "", "", "", "", "",""
-    
-
-
-
-
-
-
+        return error_message, "", "", [], [], "", "", "", "", "", ""

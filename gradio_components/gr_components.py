@@ -64,12 +64,13 @@ def gr_components():
                     translate_nr_txt = gr.TextArea(label="Translate Content for _NR_ja.txt", visible=False)
                     translate_r_txt = gr.TextArea(label="Translate Content for _R_ja.txt", visible=False)
                     dummy=gr.Textbox(label="後で非表示" ,visible=False)
-                with gr.Column():
-                    gr_components_df=gr.Dataframe()
+
                 with gr.Row():
                     html_srt = gr.HTML(visible=True)
                     html_nr_txt = gr.HTML(visible=False)
                     html_r_txt= gr.HTML(visible=False)
+                with gr.Accordion(label="英語dataframe",open=False):
+                    gr_components_df=gr.Dataframe()
             with gr.Row():
                 generate_files_button = gr.Button("日本語ファイルの生成",variant="primary")
                 t2_clear_button=gr.Button("クリア")
@@ -187,7 +188,7 @@ def gr_components():
                     download_audio=gr.File(label="ダウンロードリンク")
         
         ### Gradio-Tab7 ###
-        with gr.Tab("配布字幕の再編"):
+        with gr.Tab("originalvttの再編"):
             gr.Markdown("> original動画に付属する字幕をピリオド区切りに再編し、翻訳した字幕ファイルを作ります。")
             with gr.Row():
                 vtt_input = gr.File(label="vtt/srtファイルをアップロードしてください。")  # input用のoriginal vtt,srt
