@@ -5,15 +5,56 @@ import os
 import tempfile
 import re
 from openpyxl.styles import Alignment, Font, PatternFill
+from tab7 import tab7_func as t7
+from tab4 import tab4_func as t4
 
 # SRTファイルを解析する関数
 def parse_srt(file_path):
     with open(file_path, 'r', encoding='utf-8') as file:
-        content = file.read()
+        lines = file.readlines()
     
-    pattern = r'(\d+)\n(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})\n(.*?)\n\n'
-    matches = re.findall(pattern, content, re.DOTALL)
+    # タイムスタンプの整形を適用
+    lines = t4.unify_timestamps_forlist(lines, 'srt')
     
+    # 再度文字列として結合
+    content = ''.join(lines).replace('\u200B', '')
+    pattern = re.compile(r'(\d+)\n(\d{2}:\d{2}:\d{2},\d{3}) --> (\d{2}:\d{2}:\d{2},\d{3})\n(.*?)(?=\n\d|\Z)', re.DOTALL)
+    matches = pattern.findall(content)
+    print(f"parse_srt_len(matches):{len(matches)}")
+
+
+    subtitles = []
+    for match in matches:
+        subtitles.append({
+            'ID': int(match[0]),
+            'Start': match[1],
+            'End': match[2],
+            'Text': match[3].replace('\n', ' ')
+        })
+    
+    return subtitles
+
+def parse_vtt(file_path):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+
+    # タイムスタンプの整形を適用
+    lines = t4.unify_timestamps_forlist(lines, 'vtt')
+
+    # 再度文字列として結合
+    content = ''.join(lines).replace('\u200B', '')
+    content = t7.webvtt_remover(content)
+    print(f"after_webvtt_remover: {content}")
+    
+    pattern = re.compile(r'(\d+)\n(\d{1}:\d{2}:\d{2}\.\d{3}) --> (\d{1}:\d{2}:\d{2}\.\d{3})\n(.*?)(?=\n\d|\Z)', re.DOTALL)
+    matches = pattern.findall(content)
+    print(f"parse_vtt_d1:Len(matches): {len(matches)}")
+    
+    if len(matches) == 0:
+        pattern = re.compile(r'(\d+)\n(\d{2}:\d{2}:\d{2}\.\d{3}) --> (\d{2}:\d{2}:\d{2}\.\d{3})\n(.*?)(?=\n\d|\Z)', re.DOTALL)
+        matches = pattern.findall(content)
+        print(f"parse_vtt_d2:Len(matches): {len(matches)}")
+        
     subtitles = []
     for match in matches:
         subtitles.append({
@@ -26,10 +67,20 @@ def parse_srt(file_path):
     return subtitles
 
 # SRTファイルからExcelファイルを作成する関数
-def create_excel_from_srt(english_srt_path=None, japanese_srt_path=None):
-    if english_srt_path and japanese_srt_path:
-        english_subtitles = parse_srt(english_srt_path)
-        japanese_subtitles = parse_srt(japanese_srt_path)
+def create_excel_from_srt(english_path=None, japanese_path=None):
+    if english_path and japanese_path:
+        _, file_extension_en = os.path.splitext(english_path)
+        _, file_extension_ja = os.path.splitext(japanese_path)
+
+        if file_extension_en.lower() == '.vtt' and file_extension_ja.lower()=='.vtt':
+            english_subtitles = parse_vtt(english_path)
+            japanese_subtitles = parse_vtt(japanese_path)
+        elif file_extension_en=='.srt' and file_extension_ja=='.srt':
+            english_subtitles = parse_srt(english_path)
+            japanese_subtitles = parse_srt(japanese_path)
+        else:
+            print('ファイル形式が一致しません')
+            return None,None
 
         data = []
         for eng, jap in zip(english_subtitles, japanese_subtitles):
@@ -42,10 +93,19 @@ def create_excel_from_srt(english_srt_path=None, japanese_srt_path=None):
             })
 
         df = pd.DataFrame(data)
-        base_name = os.path.splitext(os.path.basename(english_srt_path))[0]
+        base_name = os.path.splitext(os.path.basename(english_path))[0]
+
         excel_file_name = f"{base_name}.xlsx"
-    elif english_srt_path:
-        english_subtitles = parse_srt(english_srt_path)
+
+    elif english_path:
+        _, file_extension_en = os.path.splitext(english_path)
+        if file_extension_en.lower()=='.srt':
+            english_subtitles = parse_srt(english_path)
+        elif file_extension_en.lower()=='.vtt':
+            english_subtitles = parse_vtt(english_path)
+        else:
+            print('入力に誤りがあります。')
+            return None,None
 
         data = []
         for eng in english_subtitles:
@@ -57,11 +117,18 @@ def create_excel_from_srt(english_srt_path=None, japanese_srt_path=None):
             })
 
         df = pd.DataFrame(data)
-        base_name = os.path.splitext(os.path.basename(english_srt_path))[0]
+        base_name = os.path.splitext(os.path.basename(english_path))[0]
         excel_file_name = f"{base_name}_en.xls"
-    elif japanese_srt_path:
-        japanese_subtitles = parse_srt(japanese_srt_path)
-
+        
+    elif japanese_path:
+        _, file_extension_en = os.path.splitext(japanese_path)
+        if file_extension_en.lower()=='.srt':
+            japanese_subtitles = parse_srt(japanese_path)
+        elif file_extension_en.lower()=='.vtt':
+            japanese_subtitles = parse_vtt(japanese_path)
+        else:
+            print('入力に誤りがあります。')
+            return None,None
         data = []
         for jap in japanese_subtitles:
             data.append({
@@ -70,9 +137,11 @@ def create_excel_from_srt(english_srt_path=None, japanese_srt_path=None):
                 'End': jap['End'],
                 'Japanese Subtitle': jap['Text']
             })
+        
+        
 
         df = pd.DataFrame(data)
-        base_name = os.path.splitext(os.path.basename(japanese_srt_path))[0]
+        base_name = os.path.splitext(os.path.basename(japanese_path))[0]
         excel_file_name = f"{base_name}_ja.xls"
     else:
         return None, None

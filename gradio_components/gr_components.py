@@ -43,6 +43,7 @@ def gr_components():
                 with gr.Column():
                     main_files_path = gr.File(label="SRT,TXT(NR,R)ファイルのダウンロード", file_count="multiple")
                     
+
                     with gr.Column():
                         result_srt_content = gr.TextArea(label="SRTファイルの内容を表示", autoscroll=False, show_copy_button=True)
                         result_txt_nr_content = gr.TextArea(label='「改行なし（NR）」のTXTファイルの内容を表示', autoscroll=False, show_copy_button=True)
@@ -63,6 +64,8 @@ def gr_components():
                     translate_nr_txt = gr.TextArea(label="Translate Content for _NR_ja.txt", visible=False)
                     translate_r_txt = gr.TextArea(label="Translate Content for _R_ja.txt", visible=False)
                     dummy=gr.Textbox(label="後で非表示" ,visible=False)
+                with gr.Column():
+                    gr_components_df=gr.Dataframe()
                 with gr.Row():
                     html_srt = gr.HTML(visible=True)
                     html_nr_txt = gr.HTML(visible=False)
@@ -85,7 +88,7 @@ def gr_components():
 
         ### Gradio-Tab3 ###
         
-        with gr.Tab("SRT→Excel"):
+        with gr.Tab("SRT/VTT→Excel"):
             gr.Markdown("> 英語と日本語を並べて読むためのツールです。文字起こしの際に作成できるexcelファイルと同じです。2つのsrtファイルはタイムスタンプが一致している必要があります。")   
             lang_for_xls_choice = gr.Radio(
                 choices=["English and Japanese", "only English", "only Japanese"],
@@ -124,18 +127,18 @@ def gr_components():
             
             
             if choice == "only English":
-                excel_path, df = t3.create_excel_from_srt(english_srt_path=english_file)
+                excel_path, df = t3.create_excel_from_srt(english_path=english_file)
             elif choice == "only Japanese":
-                excel_path, df = t3.create_excel_from_srt(japanese_srt_path=japanese_file)
+                excel_path, df = t3.create_excel_from_srt(japanese_path=japanese_file)
             else:  # "English and Japanese"
-                excel_path, df = t3.create_excel_from_srt(english_srt_path=english_file, japanese_srt_path=japanese_file)
+                excel_path, df = t3.create_excel_from_srt(english_path=english_file, japanese_path=japanese_file)
             return df, excel_path
         
         ### Gradio-Tab4 ##
         with gr.Tab("翻訳ファイル作成補助②"):
-            gr.Markdown("> srt,vtt,txt,docxのいずれかの英文ファイルをアップロードすると内容が表示されます。次にGoogle翻訳で得た翻訳をテキストエリアに入力します。「翻訳ファイルを作成」ボタンを押して、入力ファイルと同形式のファイルに保存します。ファイル名に _ja が付加されます。")
+            gr.Markdown("> srt,vtt,txtのいずれかの英文ファイルをアップロードすると内容が表示されます。次に翻訳を準備し、テキストエリアに入力します。「翻訳ファイルを作成」ボタンを押して、入力ファイルと同形式のファイルに保存します。ファイル名に _ja が付加されます。")
             with gr.Row():
-                file_input = gr.File(label="Upload file", file_count="single", file_types=['docx', 'txt', 'srt','vtt'])
+                file_input = gr.File(label="Upload file", file_count="single", file_types=['txt', 'srt','vtt'])
                 output_file = gr.File(label="Translated file" ,type='filepath')
             
             with gr.Row():
@@ -148,7 +151,7 @@ def gr_components():
         
         ### Gradio-Tab5 ###
         with gr.Tab("Word↔SRT,VTT,TXT"):
-            gr.Markdown("> 日本語のwordファイルをsrtあるいはtxt形式に戻すためのプログラムです。wordファイルは末尾が[_srt.docx][_vtt.docx][_txtnr.docx],[_txtr.docx]、あるいは[_srt (1).docx]のように（1）の付加された\"日本語\"ファイルが対象です。複数のファイルを一度に扱えますが、アップロードは1回で行う必要があります。")  
+            gr.Markdown("> 日本語のwordファイルをsrtあるいはtxt形式に戻すためのプログラムです。wordファイルは末尾が[_srt.docx][_vtt.docx][_txtnr.docx],[_txtr.docx]、あるいは[_srt (1).docx]のように（1）の付加された日本語ファイルが対象です。複数のファイルを一度に扱えますが、アップロードは1回で行う必要があります。")  
             with gr.Column():
                 with gr.Row():
                     to_srttxt_input = gr.File(label="Upload docx for srt/txt", file_count="multiple", type='filepath', file_types=["docx"])
@@ -200,7 +203,7 @@ def gr_components():
                 dummy_file=gr.File(visible=False)       
         ##クリアボタン追加分をまとめる。
         def t1_clear():
-            return None,"","","",[],[],"","","","",""
+            return None,"","","",[],[],"","","","","",pd.DataFrame({'1': [''], '2': [''],'3': ['']})
         def t2_clear():
             return "","","",[],pd.DataFrame({'1': [''], '2': [''],'3': ['']})
         def t4_clear():
@@ -211,21 +214,21 @@ def gr_components():
             return None,None,None,None,None,None
 
         def param1_change_clear():
-            return None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None
+            return None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None,None
 
         ### Tab1 イベントリスナー ###
         param1.change(fn=param1_change_clear,
                       inputs=[],
                       outputs=[result_srt_content,result_txt_nr_content,result_txt_r_content
-                               ,main_files_path,doc_download_path,html_srt,html_nr_txt,html_r_txt,filename_output,dummy,
+                               ,main_files_path,doc_download_path,html_srt,html_nr_txt,html_r_txt,filename_output,dummy,gr_components_df,
                                translate_srt,translate_nr_txt,translate_r_txt,download_translated_files,button2_df])
         exec_btn.click(
             fn=t1.transcribe,
             inputs=[param1, param2, param3, param4, param5, param6],
-            outputs=[result_srt_content,result_txt_nr_content, result_txt_r_content, main_files_path,doc_download_path,html_srt,html_nr_txt,html_r_txt,filename_output,dummy])
+            outputs=[result_srt_content,result_txt_nr_content, result_txt_r_content, main_files_path,doc_download_path,html_srt,html_nr_txt,html_r_txt,filename_output,dummy,gr_components_df])
         
         t1_clear_Button.click(
-            fn=t1_clear,inputs=[],outputs=[param1,result_srt_content,result_txt_nr_content,result_txt_r_content,main_files_path,doc_download_path,html_srt,html_nr_txt,html_r_txt,filename_output,dummy]
+            fn=t1_clear,inputs=[],outputs=[param1,result_srt_content,result_txt_nr_content,result_txt_r_content,main_files_path,doc_download_path,html_srt,html_nr_txt,html_r_txt,filename_output,dummy,gr_components_df]
         )
         ### Tab2 イベントリスナー ###
         

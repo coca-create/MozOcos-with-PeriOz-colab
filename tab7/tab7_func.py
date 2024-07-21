@@ -5,6 +5,7 @@ import codecs
 from docx import Document
 import pandas as pd
 from openpyxl.styles import Alignment, Font, PatternFill
+from tab4 import tab4_func as t4
 
 def replace_special_periods(text):
     text = re.sub(r'\bDr\.', 'Dr<PERIOD>', text)
@@ -15,8 +16,11 @@ def replace_special_periods(text):
 def restore_special_periods(text):
     text = text.replace('Dr<PERIOD>', 'Dr.')
     text = text.replace('<DOTCOM>', '.com')
-    text.replace('<DOTORG>', '.org')
+    text = text.replace('<DOTORG>', '.org')
     return text
+
+
+
 
 def split_segment(segment, start_time, end_time):
     if start_time is None or end_time is None:
@@ -61,6 +65,9 @@ def process_vtt(lines):
     text = ""
     header = lines[0]
 
+    # タイムスタンプの整形を適用
+    lines = t4.unify_timestamps_forlist(lines, 'vtt')
+
     for line in lines[1:]:
         if re.match(r'^\d+$', line.strip()):
             if text:
@@ -83,7 +90,7 @@ def process_vtt(lines):
     merged_segments = merge_segments(segments)
 
     output = [header]
-    segment_number = 0
+    segment_number = 1
     for text, start, end in merged_segments:
         text = restore_special_periods(text)
         output.append(f"{segment_number}")
@@ -100,6 +107,9 @@ def process_srt(lines):
     end_time = None
     text = ""
     segment_index = 0
+
+    # タイムスタンプの整形を適用
+    lines = t4.unify_timestamps_forlist(lines, 'srt')
 
     for line in lines:
         if re.match(r'^\d+$', line.strip()):
@@ -125,14 +135,12 @@ def process_srt(lines):
     segment_number = 0
     for text, start, end in merged_segments:
         text = restore_special_periods(text)
-        output.append(f"{segment_number + 1}\n{convert_seconds_to_time(start).replace('.', ',')} --> {convert_seconds_to_time(end).replace('.', ',')}\n{text}\n")
+        output.append(f"{segment_number + 1}\n{convert_seconds_to_time(start,'srt').replace('.', ',')} --> {convert_seconds_to_time(end,'srt').replace('.', ',')}\n{text}\n")
         segment_number += 1
 
     return '\n'.join(output)
 
-'''def convert_time_to_seconds(time_str):
-    h, m, s = map(float, time_str.replace(',', '.').split(':'))
-    return h * 3600 + m * 60 + s'''
+
 
 def convert_time_to_seconds(time_str):
     try:
@@ -159,7 +167,7 @@ def convert_seconds_to_time(seconds, format_type='vtt'):
     m = int((seconds % 3600) // 60)
     s = seconds % 60
     if format_type == 'vtt':
-        return f"{h:02}:{m:02}:{s:06.3f}".replace(',', '.')
+        return f"{h:01}:{m:02}:{s:06.3f}".replace(',', '.')
     else:
         return f"{h:02}:{m:02}:{s:06.3f}".replace('.', ',')
     
@@ -190,8 +198,10 @@ def process_file(input_file):
     basename = os.path.splitext(input_file)[0]
     if file_extension.lower() == '.vtt':
         docx_file = basename + '_edited_vtt.docx'
-    elif file_extension.lower()=='.srt':
-        docx_file = basename + '_edited_srt.docx'    
+    elif file_extension.lower() == '.srt':
+        docx_file = basename + '_edited_srt.docx'
+    else:
+        pass
     doc.save(docx_file)
 
     output_html = f"""<head><meta charset="UTF-8"></head><body><pre style="white-space: pre-wrap; overflow-y: auto; height: 500px; word-wrap: break-word; padding: 10px; font-family: inherit; font-size: inherit;">{output}</pre></body>"""
@@ -203,9 +213,11 @@ def correct_srt_format_from_text(text):
     # Remove all whitespace and newlines
     content = re.sub(r'[\u200B-\u200D\uFEFF]', '', text)
     content = re.sub(r'\s+', '', content)
+    content = content.replace('\u200B', '')
 
     # Reconstruct the SRT format
     pattern = re.compile(r'(\d{1,4})(\d{2}:\d{2}:\d{2},\d{3}-->\d{2}:\d{2}:\d{2},\d{3})')
+    #pattern = re.compile(r'(\d{1,4})\s*(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})')
     matches = pattern.findall(content)
     
     segments = pattern.split(content)
@@ -233,8 +245,16 @@ def correct_vtt_format_from_text(text):
     content = re.sub(r'\s+', '', content)
 
     # Reconstruct the VTT format
-    pattern = re.compile(r'(\d{1,4})(\d{2}:\d{2}:\d{2}\.\d{3}-->\d{2}:\d{2}:\d{2}\.\d{3})')
+    pattern = re.compile(r'(\d{1,4})(\d{1}:\d{2}:\d{2}\.\d{3}-->\d{1}:\d{2}:\d{2}\.\d{3})')
+    #pattern = re.compile(r'(\d{1,4})(\d{1}:\d{2}:\d{2}\.\d{3})\s*-->\s*(\d{1}:\d{2}:\d{2}\.\d{3})')
     matches = pattern.findall(content)
+    print(matches)
+    if len(matches)==0:
+        pattern = re.compile(r'(\d{1,4})(\d{2}:\d{2}:\d{2}\.\d{3}-->\d{1}:\d{2}:\d{2}\.\d{3})')
+        matches = pattern.findall(content)
+        print(matches)
+        
+
     
     segments = pattern.split(content)
     corrected_content = []
@@ -274,17 +294,74 @@ def vtt_translate(input_file, translated_content,output_file):
     return [output_ja_file_path,output_excel_file]
 
 ##追加ぶん
+def webvtt_remover(sentence): #tab3用。
+    # 特殊文字を削除
+    sentence = re.sub(r'[\u200B-\u200D\uFEFF]', '', sentence)
+    
+    # 改行文字を統一
+    sentence = sentence.replace('\r\n', '\n').replace('\r', '\n')
+    
+    # VTTフォーマットを修正する正規表現パターン
+    pattern = re.compile(r'(\d+)\n(\d{1}:\d{2}:\d{2}\.\d{3} --> \d{1}:\d{2}:\d{2}\.\d{3})', re.DOTALL)
+
+    # 最初の一致部分を検索
+    match = pattern.search(sentence)
+
+    # 一致部分の開始インデックスを取得
+    if match:
+        start_index = match.start(1)  # 第1キャプチャグループの開始位置を取得
+        rm_webvtt_sentence = sentence[start_index:]
+    elif re.compile(r'(\d+)\n(\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3})', re.DOTALL).search(sentence):
+        pattern = re.compile(r'(\d+)\n(\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3})', re.DOTALL)
+        match = pattern.search(sentence)
+        start_index = match.start(1)  # 第1キャプチャグループの開始位置を取得
+        rm_webvtt_sentence = sentence[start_index:]
+    else:
+        rm_webvtt_sentence = sentence
+    
+    return rm_webvtt_sentence
+
+def webvtt_rm(dic):
+
+    sentence="".join(dic)
+    # 改行文字を統一
+    sentence = sentence.replace('\r\n', '\n').replace('\r', '\n')
+    
+    # VTTフォーマットを修正する正規表現パターン
+    pattern = re.compile(r'(\d+)\n(\d{1}:\d{2}:\d{2}\.\d{3} --> \d{1}:\d{2}:\d{2}\.\d{3})', re.DOTALL)
+
+    # 最初の一致部分を検索
+    match = pattern.search(sentence)
+
+    # 一致部分の開始インデックスを取得
+    if match:
+        start_index = match.start(1)  # 第1キャプチャグループの開始位置を取得
+        rm_webvtt_sentence = sentence[start_index:]
+    elif re.compile(r'(\d+)\n(\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3})', re.DOTALL).search(sentence):
+        pattern = re.compile(r'(\d+)\n(\d{2}:\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}:\d{2}\.\d{3})', re.DOTALL)
+        match = pattern.search(sentence)
+        start_index = match.start(1)  # 第1キャプチャグループの開始位置を取得
+        rm_webvtt_sentence = sentence[start_index:]
+    else:
+        rm_webvtt_sentence = sentence
+    removed_dic=rm_webvtt_sentence.splitlines()
+
+    return removed_dic
 
 def create_excel(output_file, output_ja_file_path):
     segments = []
     if output_file.lower().endswith('.vtt') or output_file.lower().endswith('.srt'):
         with open(output_file, 'r') as f:
             lines = f.readlines()
+            if output_file.lower().endswith('.vtt'):
+                lines = webvtt_rm(lines)
             segments.extend(parse_segments(lines))
     
     if output_ja_file_path.lower().endswith('.vtt') or output_ja_file_path.lower().endswith('.srt'):
         with codecs.open(output_ja_file_path, 'r', 'utf-8') as f:
             ja_lines = f.readlines()
+            if output_ja_file_path.lower().endswith('.vtt'):
+                ja_lines = webvtt_rm(ja_lines)
             ja_segments = parse_segments(ja_lines)
     
     excel_data = []
